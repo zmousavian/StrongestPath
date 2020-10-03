@@ -1,1 +1,1 @@
-# StrongestPath:A-Cytoscape-App-
+# StrongestPath
