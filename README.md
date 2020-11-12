@@ -16,4 +16,4 @@ Apps -> App Manager -> Install from file
 Then browse to the location you downloaded the StrongestPath app.
 
 4- Run the application, which is under Apps menu.
-* You can find the instruction on how to run the app [here](https://github.com/zmousavian/StrongestPath/wiki/How-to-run-the-app).
+* You can find the instruction on how to run the app [here](https://github.com/zmousavian/StrongestPath/wiki/How-to-run-the-app!).
