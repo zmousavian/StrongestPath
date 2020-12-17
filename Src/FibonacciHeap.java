@@ -1,5 +1,3 @@
-
-
 /***********************************************************************
  * File: FibonacciHeap.java
  * Author: Keith Schwarz (htiek@cs.stanford.edu)

@@ -30,10 +30,20 @@ public class Nomenclature {
 
 		String root =  DataBaseManager.getDataBasePath(species, species + "-Annotations" + ".txt");
 		String line;
+		BufferedReader brr = null;
 		try {
-			BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(root)));
-			try {
-				line = br.readLine();
+			brr = new BufferedReader(new InputStreamReader(new FileInputStream(root)));
+		}
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			if(userNomen)
+				JOptionPane.showMessageDialog(null,e.getMessage());
+			else
+				JOptionPane.showMessageDialog(null, "Please download the databases.");
+		}
+		try {
+				line = brr.readLine();
 				attributes = line.split("\t");
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -41,11 +51,7 @@ public class Nomenclature {
 				JOptionPane.showMessageDialog(null,e.getMessage());
 			}
 
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			JOptionPane.showMessageDialog(null,e.getMessage());
-		}
+
 		maxAttributes=attributes.length;
 		annotationtoIDMap = new HashMap[maxAttributes + 1];
 		this.userNomen = userNomen;

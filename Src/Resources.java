@@ -34,7 +34,10 @@ public class Resources {
 	}
 	public static String getRoot()
 	{
-		
-		return getHigherFolder(new File(MyStrongestPathPlugin.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParent());
+		String cwd =   System.getProperty("user.home");
+
+		return (new File (cwd, "CytoscapeConfiguration")).toString();
+
+//		return getHigherFolder(new File(MyStrongestPathPlugin.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParent());
 	}
 }

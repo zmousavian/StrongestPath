@@ -3,11 +3,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -38,41 +34,27 @@ import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-import com.sun.prism.paint.Gradient;
-import com.sun.xml.internal.ws.api.message.ExceptionHasMessage;
-import javafx.util.Pair;
-import net.java.balloontip.styles.EdgedBalloonStyle;
 import org.cytoscape.app.CyAppAdapter;
 import org.cytoscape.app.swing.AbstractCySwingApp;
 import org.cytoscape.app.swing.CySwingAppAdapter;
 import org.cytoscape.application.CyApplicationManager;
 import org.cytoscape.application.swing.AbstractCyAction;
-import org.cytoscape.model.CyEdge;
-import org.cytoscape.model.CyNetwork;
-import org.cytoscape.model.CyNode;
-import org.cytoscape.model.CyRow;
-import org.cytoscape.model.CyTable;
-import org.cytoscape.view.model.ContinuousRange;
+import org.cytoscape.event.CyEventHelper;
+import org.cytoscape.model.*;
 import org.cytoscape.view.model.CyNetworkView;
-import org.cytoscape.view.model.Range;
-import org.cytoscape.view.model.VisualProperty;
-import org.cytoscape.view.presentation.annotations.ArrowAnnotation;
+import org.cytoscape.view.model.CyNetworkViewFactory;
+import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.view.presentation.property.*;
 import org.cytoscape.view.presentation.property.values.ArrowShape;
 import org.cytoscape.view.presentation.property.values.NodeShape;
 import org.cytoscape.view.vizmap.VisualStyle;
+import org.cytoscape.view.vizmap.VisualStyleFactory;
+import org.osgi.framework.BundleContext;
 
-import java.awt.Graphics;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
-import javax.xml.soap.Node;
 
 public class MyStrongestPathPlugin extends AbstractCySwingApp {
 
@@ -116,18 +98,26 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 
 	}
 
-	public MyStrongestPathPlugin(CySwingAppAdapter adapter) {
+	public MyStrongestPathPlugin(CySwingAppAdapter adapter, CyApplicationManager cyApplicationManager,
+								 CyNetworkViewManager cyNetworkViewManager, CyNetworkViewFactory cyNetworkViewFactory,
+								 CyNetworkFactory cyNetworkFactory, CyNetworkManager cyNetworkManager,
+								 CyEventHelper cyEventHelper, VisualStyleFactory visualStyleFactory) {
 
 		super(adapter);
 		adapter.getCySwingApplication().addAction(
-				new MyPluginMenuAction(adapter));
+				new MyPluginMenuAction(adapter, cyApplicationManager, cyNetworkViewManager, cyNetworkViewFactory,
+						cyNetworkFactory, cyNetworkManager, cyEventHelper, visualStyleFactory));
 	}
 
 	public class MyPluginMenuAction extends AbstractCyAction {
 		private JPanel topPanel;
 		private CyAppAdapter adapter;
 		final CyApplicationManager manager;
-
+		final CyNetworkViewManager network_view_manager;
+		final CyNetworkViewFactory network_view_factory;
+		final CyNetworkManager cy_network_manager;
+		final CyNetworkFactory network_factory;
+		final CyEventHelper cy_event_helper;
 		private JTabbedPane tabbedPane;
 		private JPanel dataBaseDataPanel;
 		private JPanel growthDataPanel;
@@ -202,15 +192,21 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 		protected int tabbedPaneHeight = 520 - 70;
 
 
-		public MyPluginMenuAction(CyAppAdapter adapter) {
-			super("StrongestPath", adapter.getCyApplicationManager(),
-					"network", adapter.getCyNetworkViewManager());
+		public MyPluginMenuAction(CySwingAppAdapter adapter, CyApplicationManager cyApplicationManager,
+								  CyNetworkViewManager cyNetworkViewManager, CyNetworkViewFactory cyNetworkViewFactory,
+								  CyNetworkFactory cyNetworkFactory, CyNetworkManager cyNetworkManager, CyEventHelper cyEventHelper, VisualStyleFactory visualStyleFactory) {
+			super("StrongestPath", cyApplicationManager,
+					"network", cyNetworkViewManager);
+			System.out.println("HI");
 			this.adapter = adapter;
 			setPreferredMenu("Apps");
-			manager = adapter.getCyApplicationManager();
-			visualStyle = this.adapter.getVisualStyleFactory()
-					.createVisualStyle(styleName);
-
+			manager = cyApplicationManager;
+			network_view_manager = cyNetworkViewManager;
+			network_view_factory = cyNetworkViewFactory;
+			network_factory = cyNetworkFactory;
+			cy_network_manager = cyNetworkManager;
+			cy_event_helper = cyEventHelper;
+			visualStyle = visualStyleFactory.createVisualStyle(styleName);
 		}
 
 		private void doFinalize() {
@@ -390,11 +386,13 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 			download_state.setBounds(280, 185, 190, 23 );
 			panel_1.add(download_state);
 
-
 			speciesComboBox = new JComboBox();
 			make_species_file(Resources.getRoot());
 
+			System.out.println(Resources.getRoot());
+
 			String root = new File(Resources.getRoot(),"files").toString();
+			System.out.println(root);
 			root=new File(root, "species.txt").toString();
 			String line;
 			int s=0;
@@ -949,8 +947,15 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 
 
 						// ***** Do the Job ******
+						try {
+							frame.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+							doKStrongestPath();
+							frame.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+						}
+						catch (Exception e) {
+							frame.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+						}
 
-						doKStrongestPath();
 					}
 				}
 			});
@@ -1227,8 +1232,15 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
                         DATAdstfilePathRP = dstfileAddressRP.getText();
                         DATAdsttextFieldRP = dstTextFieldRP.getText();
                         DATAspecies=speciesComboBox.getSelectedItem().toString();
-
-                        getRegulatoryPath();
+						try {
+							frame.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+							getRegulatoryPath();
+							frame.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+						}
+						catch (Exception e)
+						{
+							frame.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+						}
                     }
                 }
             });
@@ -1377,7 +1389,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 					cy_node = mark.get(node.id);
 				node.cy_node = cy_node;
 			}
-			adapter.getCyEventHelper().flushPayloadEvents();
+			cy_event_helper.flushPayloadEvents();
 
 			step =  6 ;
 			HashMap<CyEdge, Boolean> edges_type = new HashMap<CyEdge, Boolean>();
@@ -1401,7 +1413,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
                 		edges_type.put(edge, node.parent.is_exc == node.is_exc);
                     }
 				}
-			adapter.getCyEventHelper().flushPayloadEvents();
+			cy_event_helper.flushPayloadEvents();
 			for (Entry<CyEdge, Boolean> e: edges_type.entrySet()) {
 				if(e.getValue())
 					setEdgeStyle(e.getKey(), Color.green, ArrowShapeVisualProperty.ARROW);
@@ -1471,8 +1483,8 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
             String networkTitle = "Regulatory Path network view";
             CyNetwork network = getNetwork(true, title);
             CyNetworkView networkView = getNetworkView(true, network);
-            adapter.getCyNetworkManager().addNetwork(network);
-            adapter.getCyNetworkViewManager().addNetworkView(networkView);
+			cy_network_manager.addNetwork(network);
+			network_view_manager.addNetworkView(networkView);
 			try {
 
 				int base_id = 1;
@@ -1506,7 +1518,8 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 					__rp_visualize(network, merged_graph, "", 0, title);
 				}
 				manager.getCurrentNetworkView().updateView();
-				adapter.getCyEventHelper().flushPayloadEvents();
+
+				cy_event_helper.flushPayloadEvents();
 			}
 			catch (Exception e)
 			{
@@ -1583,8 +1596,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 										  ArrayList<String> dATAdatabaseNames, int numberExpand)
 				throws Exception {
 
-			CyNetwork network = adapter.getCyApplicationManager()
-					.getCurrentNetwork();
+			CyNetwork network = manager.getCurrentNetwork();
 			String databaseName = network.getRow(network).get(CyNetwork.NAME,
 					String.class);
 			StrongestPath strongestPath = subNetworks.get(databaseName);
@@ -1769,9 +1781,13 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 					try {
 						if (geneListTextField.getText().isEmpty())
 							throw new Exception();
-						else
+						else {
+							frame.setCursor(new Cursor(Cursor.WAIT_CURSOR));
 							doExpand();
+							frame.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+						}
 					} catch (Exception ex) {
+						frame.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
 						JOptionPane
 								.showMessageDialog(null,
 										" Please select your input genes.");
@@ -1909,7 +1925,6 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 			try {
 				nomen = new Nomenclature(DATAspecies, null, false);
 			} catch (Exception e) {
-				JOptionPane.showMessageDialog(null, e.getMessage());
 				e.printStackTrace();
 			}
 
@@ -2135,8 +2150,8 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 			String networkTitle = "Strongest path network view";
 			CyNetwork network = getNetwork(createNetwork, title);
 			CyNetworkView networkView = getNetworkView(createNetwork, network);
-			adapter.getCyNetworkManager().addNetwork(network);
-			adapter.getCyNetworkViewManager().addNetworkView(networkView);
+			cy_network_manager.addNetwork(network);
+			network_view_manager.addNetworkView(networkView);
 
 			Integer max = Collections.max(subGraph.values());
 
@@ -2187,7 +2202,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 				/* Change color and shape of the node in the network */
 
 			}
-			adapter.getCyEventHelper().flushPayloadEvents();
+			cy_event_helper.flushPayloadEvents();
 
 			for (int i = 0; i < allNodes.size(); i++) {
 				int g = (255 / (max)) * (max - allNodes.get(i).getValue());
@@ -2240,14 +2255,8 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 			// New 3.x
 			CyNetwork network = getNetwork(true, title);
 			CyNetworkView networkView = getNetworkView(true, network);
-			adapter.getCyNetworkManager().addNetwork(network);
-			adapter.getCyNetworkViewManager().addNetworkView(networkView);
-			// CyNetwork network =
-			// adapter.getCyNetworkFactory().createNetwork();
-			// network.getRow(network).set(CyNetwork.NAME, title);
-			// addNodeIDColumn(network);
-			// Old 2.x
-			// graphStyle.setNodeSizeLocked(false);
+			cy_network_manager.addNetwork(network);
+			network_view_manager.addNetworkView(networkView);
 
 			/* find nodes ids' */
 			String[] srcIds = new String[nodes.length];
@@ -2278,7 +2287,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 				newStrings.add(s);
 				newNodes.add(node);
 			}
-			adapter.getCyEventHelper().flushPayloadEvents();
+			cy_event_helper.flushPayloadEvents();
 			String s;
 
 			for (int i = 0; i < newNodes.size(); i++) {
@@ -2356,7 +2365,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 			// Old 2.x
 			// Cytoscape.getCurrentNetworkView().redrawGraph(false, true);
 			manager.getCurrentNetworkView().updateView();
-			adapter.getCyEventHelper().flushPayloadEvents();
+			cy_event_helper.flushPayloadEvents();
 		}
 
 		private void setNodeId(CyNetwork network, CyNode node, Nomenclature nomen, String id)
@@ -2374,8 +2383,8 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 			CyNetwork network = getNetwork(createNetwork, title);
 			CyNetworkView networkView = getNetworkView(createNetwork, network);
 
-			adapter.getCyNetworkManager().addNetwork(network);
-			adapter.getCyNetworkViewManager().addNetworkView(networkView);
+			cy_network_manager.addNetwork(network);
+			network_view_manager.addNetworkView(networkView);
 			/*******/
 			/* change style of nodes */
 
@@ -2417,7 +2426,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 					newStrings.add(s);
 
 				}
-				adapter.getCyEventHelper().flushPayloadEvents();
+				cy_event_helper.flushPayloadEvents();
 				String s;
 				for (int i = 0; i < newNodes.size(); i++) {
 					s = newStrings.get(i);
@@ -2444,7 +2453,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 					newNodes.add(node);
 					newStrings.add(s1);
 				}
-				adapter.getCyEventHelper().flushPayloadEvents();
+				cy_event_helper.flushPayloadEvents();
 				String s1;
 				for (int i = 0; i < newNodes.size(); i++) {
 					s1 = newStrings.get(i);
@@ -2506,7 +2515,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 					newNodesIDs.add(nodeID1);
 
 					/*
-					 * adapter.getCyEventHelper().flushPayloadEvents(); step =
+					 * cy_event_helper.flushPayloadEvents(); step =
 					 * 272; nodeStyle3(node1, nomen, nodeID1); step = 273;
 					 */
 				}
@@ -2521,7 +2530,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 					setNodeId(network, node2, nomen, Integer.toString(nodeID2));
 					newNodes.add(node2);
 					newNodesIDs.add(nodeID2);
-					// adapter.getCyEventHelper().flushPayloadEvents();
+					// cy_event_helper.flushPayloadEvents();
 					// step = 28;
 					// nodeStyle3(node2, nomen, nodeID2);
 				}
@@ -2565,7 +2574,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 				}
 
 			}
-			adapter.getCyEventHelper().flushPayloadEvents();
+			cy_event_helper.flushPayloadEvents();
 
 			for (int i = 0; i < newNodes.size(); i++) {
 				nodeStyle3(newNodes.get(i), nomen, newNodesIDs.get(i));
@@ -2705,7 +2714,7 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 			// Cytoscape.getCurrentNetworkView().redrawGraph(false, true);
 			// networkView.updateView();
 			networkView.updateView();
-			adapter.getCyEventHelper().flushPayloadEvents();
+			cy_event_helper.flushPayloadEvents();
 
 		}
         private void setEdgeStyle(CyEdge edge, Color color, ArrowShape arrow_type) {
@@ -2774,22 +2783,20 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 				CyNetwork network) {
 			CyNetworkView networkView;
 			if (createNetwork)
-				networkView = adapter.getCyNetworkViewFactory()
-						.createNetworkView(network);
+				networkView = network_view_factory.createNetworkView(network);
 			else
-				networkView = adapter.getCyApplicationManager()
-						.getCurrentNetworkView();
+				networkView = manager.getCurrentNetworkView();
 			return networkView;
 		}
 
 		private CyNetwork getNetwork(boolean createNetwork, String title) {
 			CyNetwork network;
 			if (createNetwork) {
-				network = adapter.getCyNetworkFactory().createNetwork();
+				network = network_factory.createNetwork();
 				network.getRow(network).set(CyNetwork.NAME, title);
 
 			} else
-				network = adapter.getCyApplicationManager().getCurrentNetwork();
+				network = manager.getCurrentNetwork();
 			addNodeIDColumn(network);
 			return network;
 		}
@@ -2916,12 +2923,12 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 		/*
 		 * //TODO Convert next few lines to the new 3.x
 		 * CyLayoutAlgorithm layoutAlgorithm =
-		 * adapter .getCyLayoutAlgorithmManager().getAllLayouts().iterator()
+		 * getCyLayoutAlgorithmManager().getAllLayouts().iterator()
 		 * .next(); TaskIterator itr =
 		 * layoutAlgorithm.createTaskIterator(networkView,
 		 * layoutAlgorithm.createLayoutContext(),
 		 * CyLayoutAlgorithm.ALL_NODE_VIEWS, null);
-		 * adapter.getTaskManager().execute(itr);
+		 * getTaskManager().execute(itr);
 		 */
 	}
 
@@ -2942,8 +2949,10 @@ public class MyStrongestPathPlugin extends AbstractCySwingApp {
 
     public static String getRoot()
 		{
+			String cwd =   System.getProperty("user.home");
+			return (new File (cwd, "CytoscapeConfiguration")).toString();
 
-			return getHigherFolder(new File(MyStrongestPathPlugin.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParent());
+//			return getHigherFolder(new File(MyStrongestPathPlugin.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParent());
 		}
 
 

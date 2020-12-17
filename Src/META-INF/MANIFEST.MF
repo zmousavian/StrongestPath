@@ -1,6 +1,18 @@
 Manifest-Version: 1.0
-Cytoscape-API-Compatibility: 3.0
+Cytoscape-API-Compatibility: 3.3
 Cytoscape-App: MyStrongestPathPlugin
 Cytoscape-App-Name: Strongest Path
-Cytoscape-App-Version: 1.1
-
+Cytoscape-App-Version: 2.0
+Bundle-SymbolicName: MyStrongestPathPlugin
+Bundle-Name: Strongest Path
+Bundle-Version: 2.0
+Import-Package:  javax.imageio,javax.swing,javax.swing.border,javax.swing.event, javax.swing.filechooser,
+    org.cytoscape.app.swing;version="[3.3,4)",org.cytoscape.application;version="[3.3,4)",
+    org.cytoscape.application.swing;version="[3.3,4)",org.cytoscape.command;version="[3.3,4)",
+    org.cytoscape.model;version="[3.3,4)",org.cytoscape.service.util;version="[3.3,4)",
+    org.cytoscape.task;version="[3.3,4)",org.cytoscape.task.create;version="[3.3,4)",
+    org.cytoscape.task.read;version="[3.3,4)",org.cytoscape.task.select;version="[3.3,4)",
+    org.cytoscape.view.model;version="[3.3,4)", org.cytoscape.work;version="[3.3,4)",
+    org.cytoscape.app.*;version="[3.3,4)", javafx.util, org.cytoscape.view.presentation.property;version="[3.3,4)",
+    org.cytoscape.event;version="[3.3,4)", org.cytoscape.view.vizmap;version="[3.3,4)"
+Bundle-Activator: StrongestPathActivator

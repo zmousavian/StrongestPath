@@ -129,6 +129,7 @@ public class DataDownloader {
         }
         catch(Throwable t)
         {
+            t.printStackTrace();
             state = "failed";
             System.out.println("Download failed in initials");
         }

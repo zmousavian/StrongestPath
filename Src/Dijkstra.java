@@ -1,5 +1,3 @@
-
-
 /**************************************************************************
  * File: Dijkstra.java
  * Author: Keith Schwarz (htiek@cs.stanford.edu)
@@ -33,7 +31,6 @@
 
 import java.util.*; // For HashMap
 
-import javax.swing.JOptionPane;
 public final class Dijkstra {
 	public Map<Integer, Integer> resultsParent;
 	public Map<Integer, Double> result;

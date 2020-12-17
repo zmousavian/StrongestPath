@@ -1,11 +1,7 @@
-import javafx.util.Pair;
 import org.cytoscape.model.CyNode;
 
 import java.io.IOException;
 import java.util.*;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Map.Entry;
 import java.lang.Math;
 
 
